@@ -15,34 +15,14 @@ class AttendanceSheet(models.Model):
     _description = 'Attendance Sheet'
     _name = 'attendance.sheet'
 
-    name = fields.Char('Description', readonly=True)
-    standard_id = fields.Many2one('school.standard', 'Academic Class',
-                                  required=True,
-                                  help="Select Standard")
-    month_id = fields.Many2one('academic.month', 'Month', required=True,
-                               help="Select Academic Month")
-    year_id = fields.Many2one('academic.year', 'Year', required=True)
+    name = fields.Char('Description',)
+    month_id = fields.Many2one('attendance.month', 'Tháng', required=True,)
+    year_id = fields.Many2one('attendance.year', 'Năm', required=True)
     attendance_ids = fields.One2many('attendance.sheet.line', 'standard_id',
-                                     'Attendance',
-                                     help="Academic Year")
-    user_id = fields.Many2one('school.teacher', 'Faculty',
-                              help="Select Teacher")
-    attendance_type = fields.Selection([('daily', 'FullDay'),
-                                        ('lecture', 'Lecture Wise')], 'Type')
-
-    @api.onchange('standard_id')
-    def onchange_class_info(self):
-        '''Method to get student roll no'''
-        stud_list = []
-        stud_obj = self.env['student.student']
-        for rec in self:
-            if rec.standard_id:
-                stud_list = [{'roll_no': stu.roll_no, 'name': stu.name}
-                             for stu in stud_obj.search([('standard_id', '=',
-                                                          rec.standard_id),
-                                                         ('state', '=',
-                                                          'done')])]
-            rec.attendance_ids = stud_list
+                                     'Danh sách chấm công',)
+    user_id = fields.Many2one('res.user', 'Người chấm công')
+    # attendance_type = fields.Selection([('daily', 'FullDay'),
+    #                                     ('lecture', 'Lecture Wise')], 'Type')
 
     @api.model
     def fields_view_get(self, view_id=None,
@@ -181,10 +161,17 @@ class Attendance(models.Model):
             attendance_sheet_data.percentage = percentage
         return res
 
-    roll_no = fields.Integer('Roll Number', required=True,
+    roll_no = fields.Integer('STT', required=True,
                              help='Roll Number of Student')
     standard_id = fields.Many2one('attendance.sheet', 'Standard')
-    name = fields.Char('Student Name', required=True, readonly=True)
+    name = fields.Many2one('hr.employee','Nhân viên', required=True)
+    position = fields.Many2one('hr.employee','Chức vụ', compute="get_position")
+
+    @api.depends('name')
+    def get_position(self):
+        for rec in self:
+            rec.position = rec.name.job_title
+
     one = fields.Boolean('1')
     two = fields.Boolean('2')
     three = fields.Boolean('3')
@@ -217,4 +204,139 @@ class Attendance(models.Model):
     two_0 = fields.Boolean('30')
     three_1 = fields.Boolean('31')
     percentage = fields.Float(compute="_compute_percentage", method=True,
-                              string='Attendance (%)', store=False)
+                              string='Ngày công (%)', store=False)
+    
+class AcademicYear(models.Model):
+    '''Defines an academic year.'''
+
+    _name = "attendance.year"
+    _description = "Academic Year"
+    _order = "sequence"
+
+    sequence = fields.Integer('Số TT', required=True,
+                              help="Sequence order you want to see this year.")
+    name = fields.Char('Năm', required=True, help='Name of academic year')
+    date_start = fields.Date('Ngày bắt đầu', required=True,
+                             help='Ngày bắt dầu của năm')
+    date_stop = fields.Date('Ngày kết thúc', required=True,
+                            help='Ngày kết thúc năm')
+    month_ids = fields.One2many('attendance.month', 'year_id', 'Tháng',
+                                help="related Academic months")
+    current = fields.Boolean('Năm hiện tại', help="Năm hiện tại")
+    description = fields.Text('Mô tả')
+
+    @api.model
+    def next_year(self, sequence):
+        '''This method assign sequence to years'''
+        year_id = self.search([('sequence', '>', sequence)], order='id',
+                              limit=1)
+        if year_id:
+            return year_id.id
+        return False
+
+    # def name_get(self):
+    #     '''Method to display name and code'''
+    #     return [(rec.id, ' [' + rec.code + ']' + rec.name) for rec in self]
+
+    def generate_academicmonth(self):
+        """Generate academic months."""
+        interval = 1
+        month_obj = self.env['academic.month']
+        for data in self:
+            ds = data.date_start
+            while ds < data.date_stop:
+                de = ds + relativedelta(months=interval, days=-1)
+                if de > data.date_stop:
+                    de = data.date_stop
+                month_obj.create({
+                    'name': ds.strftime('%B'),
+                    'code': ds.strftime('%m/%Y'),
+                    'date_start': ds.strftime('%Y-%m-%d'),
+                    'date_stop': de.strftime('%Y-%m-%d'),
+                    'year_id': data.id,
+                })
+                ds = ds + relativedelta(months=interval)
+        return True
+
+    @api.constrains('date_start', 'date_stop')
+    def _check_academic_year(self):
+        '''Method to check start date should be greater than end date
+           also check that dates are not overlapped with existing academic
+           year'''
+        new_start_date = self.date_start
+        new_stop_date = self.date_stop
+        delta = new_stop_date - new_start_date
+        if delta.days > 365 and not calendar.isleap(new_start_date.year):
+            raise ValidationError(_('''Error! The duration of the academic year
+                                      is invalid.'''))
+        if (self.date_stop and self.date_start and
+                self.date_stop < self.date_start):
+            raise ValidationError(_('''The start date of the academic year'
+                                      should be less than end date.'''))
+        for old_ac in self.search([('id', 'not in', self.ids)]):
+            # Check start date should be less than stop date
+            if (old_ac.date_start <= self.date_start <= old_ac.date_stop or
+                    old_ac.date_start <= self.date_stop <= old_ac.date_stop):
+                raise ValidationError(_('''Error! You cannot define overlapping
+                                          academic years.'''))
+
+    @api.constrains('current')
+    def check_current_year(self):
+        check_year = self.search([('current', '=', True)])
+        if len(check_year.ids) >= 2:
+            raise ValidationError(_('''Error! You cannot set two current \
+year active!'''))
+
+
+class AcademicMonth(models.Model):
+    '''Defining a month of an academic year.'''
+
+    _name = "attendance.month"
+    _description = "Academic Month"
+    _order = "date_start"
+
+    name = fields.Char('Name', required=True, help='Name of Academic month')
+    # code = fields.Char('Code', required=True, help='Code of Academic month')
+    date_start = fields.Date('Start of Period', required=True,
+                             help='Starting of academic month')
+    date_stop = fields.Date('End of Period', required=True,
+                            help='Ending of academic month')
+    year_id = fields.Many2one('attendance.year', 'Academic Year', required=True,
+                              help="Related academic year ")
+    description = fields.Text('Description')
+
+    _sql_constraints = [
+        ('month_unique', 'unique(date_start, date_stop, year_id)',
+         'Academic Month should be unique!'),
+    ]
+
+    @api.constrains('date_start', 'date_stop')
+    def _check_duration(self):
+        '''Method to check duration of date'''
+        if (self.date_stop and self.date_start and
+                self.date_stop < self.date_start):
+            raise ValidationError(_(''' End of Period date should be greater
+                                    than Start of Peroid Date!'''))
+
+    @api.constrains('year_id', 'date_start', 'date_stop')
+    def _check_year_limit(self):
+        '''Method to check year limit'''
+        if self.year_id and self.date_start and self.date_stop:
+            if (self.year_id.date_stop < self.date_stop or
+                    self.year_id.date_stop < self.date_start or
+                    self.year_id.date_start > self.date_start or
+                    self.year_id.date_start > self.date_stop):
+                raise ValidationError(_('''Invalid Months ! Some months overlap
+                                    or the date period is not in the scope
+                                    of the academic year!'''))
+
+    @api.constrains('date_start', 'date_stop')
+    def check_months(self):
+        """Check start date should be less than stop date."""
+        for old_month in self.search([('id', 'not in', self.ids)]):
+            if old_month.date_start <= \
+                    self.date_start <= old_month.date_stop \
+                    or old_month.date_start <= \
+                    self.date_stop <= old_month.date_stop:
+                raise ValidationError(_('''Error! You cannot define
+                    overlapping months!'''))

@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <!-- Action Of Form & Tree Views Of Academic Year Information -->
+    <record id="action_attendance_year_form" model="ir.actions.act_window">
+        <field name="name">Năm</field>
+        <field name="res_model">attendance.year</field>
+        <field name="view_mode">tree,form</field>
+    </record>
+    <!-- Action Of Form & Tree Views Of Academic Month Information -->
+    <record id="action_attendance_month_form" model="ir.actions.act_window">
+        <field name="name">Tháng</field>
+        <field name="res_model">attendance.month</field>
+        <field name="view_mode">tree,form</field>
+    </record>
+</odoo>
