@@ -15,7 +15,7 @@ class AttendanceSheet(models.Model):
     _description = 'Attendance Sheet'
     _name = 'attendance.sheet'
 
-    name = fields.Char('Description',)
+    name = fields.Char('Mô tả',)
     month_id = fields.Many2one('attendance.month', 'Tháng', required=True,)
     year_id = fields.Many2one('attendance.year', 'Năm', required=True)
     attendance_ids = fields.One2many('attendance.sheet.line', 'standard_id',
@@ -41,45 +41,45 @@ class AttendanceSheet(models.Model):
         if end:
             end_dates = datetime.strptime(end,
                                           DEFAULT_SERVER_DATE_FORMAT)
-        if view_type == 'form':
-            digits_temp_dict = {1: 'one', 2: 'two', 3: 'three', 4: 'four',
-                                5: 'five', 6: 'six', 7: 'seven', 8: 'eight',
-                                9: 'nine', 10: 'ten', 11: 'one_1', 12: 'one_2',
-                                13: 'one_3', 14: 'one_4', 15: 'one_5',
-                                16: 'one_6', 17: 'one_7', 18: 'one_8',
-                                19: 'one_9', 20: 'one_0',
-                                21: 'two_1', 22: 'two_2', 23: 'two_3',
-                                24: 'two_4', 25: 'two_5',
-                                26: 'two_6', 27: 'two_7', 28: 'two_8',
-                                29: 'two_9', 30: 'two_0',
-                                31: 'three_1'}
-            flag = 1
-            if st_dates and end_dates:
-                while st_dates <= end_dates:
-                    res['fields']['attendance_ids'
-                                  ]['views'
-                                    ]['tree'
-                                      ]['fields'
-                                        ][digits_temp_dict.get(flag)
-                                          ]['string'
-                                            ] = st_dates.day
-                    st_dates += rd(days=1)
-                    flag += 1
-            if flag < 32:
-                res['fields']['attendance_ids'
-                              ]['views']['tree'
-                                         ]['fields'
-                                           ][digits_temp_dict.get(flag)
-                                             ]['string'] = ''
-                doc2 = etree.XML(res['fields']['attendance_ids']['views'
-                                                                 ]['tree'
-                                                                   ]['arch'])
-                nodes = doc2.xpath("//field[@name='" +
-                                   digits_temp_dict.get(flag) + "']")
-                for node in nodes:
-                    node.set('modifiers', json.dumps({'invisible': True}))
-                res['fields']['attendance_ids'
-                              ]['views']['tree']['arch'] = etree.tostring(doc2)
+        # if view_type == 'form':
+        #     digits_temp_dict = {1: 'one', 2: 'two', 3: 'three', 4: 'four',
+        #                         5: 'five', 6: 'six', 7: 'seven', 8: 'eight',
+        #                         9: 'nine', 10: 'ten', 11: 'one_1', 12: 'one_2',
+        #                         13: 'one_3', 14: 'one_4', 15: 'one_5',
+        #                         16: 'one_6', 17: 'one_7', 18: 'one_8',
+        #                         19: 'one_9', 20: 'one_0',
+        #                         21: 'two_1', 22: 'two_2', 23: 'two_3',
+        #                         24: 'two_4', 25: 'two_5',
+        #                         26: 'two_6', 27: 'two_7', 28: 'two_8',
+        #                         29: 'two_9', 30: 'two_0',
+        #                         31: 'three_1'}
+        #     flag = 1
+        #     if st_dates and end_dates:
+        #         while st_dates <= end_dates:
+        #             res['fields']['attendance_ids'
+        #                           ]['views'
+        #                             ]['tree'
+        #                               ]['fields'
+        #                                 ][digits_temp_dict.get(flag)
+        #                                   ]['string'
+        #                                     ] = st_dates.day
+        #             st_dates += rd(days=1)
+        #             flag += 1
+        #     if flag < 32:
+        #         res['fields']['attendance_ids'
+        #                       ]['views']['tree'
+        #                                  ]['fields'
+        #                                    ][digits_temp_dict.get(flag)
+        #                                      ]['string'] = ''
+        #         doc2 = etree.XML(res['fields']['attendance_ids']['views'
+        #                                                          ]['tree'
+        #                                                            ]['arch'])
+        #         nodes = doc2.xpath("//field[@name='" +
+        #                            digits_temp_dict.get(flag) + "']")
+        #         for node in nodes:
+        #             node.set('modifiers', json.dumps({'invisible': True}))
+        #         res['fields']['attendance_ids'
+        #                       ]['views']['tree']['arch'] = etree.tostring(doc2)
         return res
 class Attendance(models.Model):
     _description = 'Attendance Sheet Line'
@@ -165,48 +165,59 @@ class Attendance(models.Model):
                              help='Roll Number of Student')
     standard_id = fields.Many2one('attendance.sheet', 'Standard')
     name = fields.Many2one('hr.employee','Nhân viên', required=True)
-    position = fields.Many2one('hr.employee','Chức vụ', compute="get_position")
-
+    position = fields.Char('Chức vụ', compute="get_position")
+    month = fields.Integer(compute="get_month")
+    
+    @api.onchange('standard_id')
+    def get_month(self):
+        for rec in self:
+            rec.month = rec.standard_id.month_id.name
+            print("=============")
+            print(rec.month)
+            
     @api.depends('name')
     def get_position(self):
         for rec in self:
             rec.position = rec.name.job_title
 
-    one = fields.Boolean('1')
-    two = fields.Boolean('2')
-    three = fields.Boolean('3')
-    four = fields.Boolean('4')
-    five = fields.Boolean('5')
-    seven = fields.Boolean('7')
-    six = fields.Boolean('6')
-    eight = fields.Boolean('8')
-    nine = fields.Boolean('9')
-    ten = fields.Boolean('10')
-    one_1 = fields.Boolean('11')
-    one_2 = fields.Boolean('12')
-    one_3 = fields.Boolean('13')
-    one_4 = fields.Boolean('14')
-    one_5 = fields.Boolean('15')
-    one_6 = fields.Boolean('16')
-    one_7 = fields.Boolean('17')
-    one_8 = fields.Boolean('18')
-    one_9 = fields.Boolean('19')
-    one_0 = fields.Boolean('20')
-    two_1 = fields.Boolean('21')
-    two_2 = fields.Boolean('22')
-    two_3 = fields.Boolean('23')
-    two_4 = fields.Boolean('24')
-    two_5 = fields.Boolean('25')
-    two_6 = fields.Boolean('26')
-    two_7 = fields.Boolean('27')
-    two_8 = fields.Boolean('28')
-    two_9 = fields.Boolean('29')
-    two_0 = fields.Boolean('30')
-    three_1 = fields.Boolean('31')
+    def get_symbol_default(self):
+        self.three.name = '+'
+
+    one = fields.Many2one('attendance.symbol', '1')
+    two = fields.Many2one('attendance.symbol', '2')
+    three = fields.Many2one('attendance.symbol', '3')
+    four = fields.Many2one('attendance.symbol', '4')
+    five = fields.Many2one('attendance.symbol', '5')
+    seven = fields.Many2one('attendance.symbol', '6')
+    six = fields.Many2one('attendance.symbol', '7')
+    eight = fields.Many2one('attendance.symbol', '8')
+    nine = fields.Many2one('attendance.symbol', '9')
+    ten = fields.Many2one('attendance.symbol', '10')
+    one_1 = fields.Many2one('attendance.symbol', '11')
+    one_2 = fields.Many2one('attendance.symbol', '12')
+    one_3 = fields.Many2one('attendance.symbol', '13')
+    one_4 = fields.Many2one('attendance.symbol', '14')
+    one_5 = fields.Many2one('attendance.symbol', '15')
+    one_6 = fields.Many2one('attendance.symbol', '16')
+    one_7 = fields.Many2one('attendance.symbol', '17')
+    one_8 = fields.Many2one('attendance.symbol', '18')
+    one_9 = fields.Many2one('attendance.symbol', '19')
+    one_0 = fields.Many2one('attendance.symbol', '20')
+    two_1 = fields.Many2one('attendance.symbol', '21')
+    two_2 = fields.Many2one('attendance.symbol', '22')
+    two_3 = fields.Many2one('attendance.symbol', '23')
+    two_4 = fields.Many2one('attendance.symbol', '24')
+    two_5 = fields.Many2one('attendance.symbol', '25')
+    two_6 = fields.Many2one('attendance.symbol', '26')
+    two_7 = fields.Many2one('attendance.symbol', '27')
+    two_8 = fields.Many2one('attendance.symbol', '28')
+    two_9 = fields.Many2one('attendance.symbol', '29')
+    two_0 = fields.Many2one('attendance.symbol', '30')
+    three_1 = fields.Many2one('attendance.symbol', '31')
     percentage = fields.Float(compute="_compute_percentage", method=True,
                               string='Ngày công (%)', store=False)
     
-class AcademicYear(models.Model):
+class AttendanceYear(models.Model):
     '''Defines an academic year.'''
 
     _name = "attendance.year"
@@ -288,14 +299,15 @@ class AcademicYear(models.Model):
 year active!'''))
 
 
-class AcademicMonth(models.Model):
+class AttendanceMonth(models.Model):
     '''Defining a month of an academic year.'''
 
     _name = "attendance.month"
     _description = "Academic Month"
-    _order = "date_start"
+    _order = "name"
+    _rec_name = "name"
 
-    name = fields.Char('Name', required=True, help='Name of Academic month')
+    name = fields.Integer('Name', required=True, help='Name of Academic month')
     # code = fields.Char('Code', required=True, help='Code of Academic month')
     date_start = fields.Date('Start of Period', required=True,
                              help='Starting of academic month')
@@ -340,3 +352,13 @@ class AcademicMonth(models.Model):
                     self.date_stop <= old_month.date_stop:
                 raise ValidationError(_('''Error! You cannot define
                     overlapping months!'''))
+class AttendanceSymbol(models.Model):
+    '''Defining Attendance Symbol.'''
+    _name = "attendance.symbol"
+    _description = "Attendance Symbol"
+    _order = "name"
+    _rec_name = "name"
+
+    name = fields.Char("Kí hiệu")
+    description = fields.Char("Mô tả")
+    workday = fields.Float("Ngày công")
