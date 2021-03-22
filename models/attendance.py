@@ -91,74 +91,74 @@ class Attendance(models.Model):
 
         res = {}
         for attendance_sheet_data in self:
-            att_count = 0
-            percentage = 0.0
-            if attendance_sheet_data.one:
-                att_count = att_count + 1
+            att_count = 0.0
+            # percentage = 0.0
+            if attendance_sheet_data.one.workday:
+                att_count = att_count + attendance_sheet_data.one.workday
             if attendance_sheet_data.two:
-                att_count = att_count + 1
+                att_count = att_count + attendance_sheet_data.two.workday
             if attendance_sheet_data.three:
-                att_count = att_count + 1
+                att_count = att_count + attendance_sheet_data.three.workday
             if attendance_sheet_data.four:
-                att_count = att_count + 1
+                att_count = att_count + attendance_sheet_data.four.workday
             if attendance_sheet_data.five:
-                att_count = att_count + 1
+                att_count = att_count + attendance_sheet_data.five.workday
             if attendance_sheet_data.six:
-                att_count = att_count + 1
+                att_count = att_count + attendance_sheet_data.six.workday
             if attendance_sheet_data.seven:
-                att_count = att_count + 1
+                att_count = att_count + attendance_sheet_data.seven.workday
             if attendance_sheet_data.eight:
-                att_count = att_count + 1
+                att_count = att_count + attendance_sheet_data.eight.workday
             if attendance_sheet_data.nine:
-                att_count = att_count + 1
+                att_count = att_count + attendance_sheet_data.nine.workday
             if attendance_sheet_data.ten:
-                att_count = att_count + 1
+                att_count = att_count + attendance_sheet_data.ten.workday
 
             if attendance_sheet_data.one_1:
-                att_count = att_count + 1
+                att_count = att_count + attendance_sheet_data.one_1.workday
             if attendance_sheet_data.one_2:
-                att_count = att_count + 1
+                att_count = att_count + attendance_sheet_data.one_2.workday
             if attendance_sheet_data.one_3:
-                att_count = att_count + 1
+                att_count = att_count + attendance_sheet_data.one_3.workday
             if attendance_sheet_data.one_4:
-                att_count = att_count + 1
+                att_count = att_count + attendance_sheet_data.one_4.workday
             if attendance_sheet_data.one_5:
-                att_count = att_count + 1
+                att_count = att_count + attendance_sheet_data.one_5.workday
             if attendance_sheet_data.one_6:
-                att_count = att_count + 1
+                att_count = att_count + attendance_sheet_data.one_6.workday
             if attendance_sheet_data.one_7:
-                att_count = att_count + 1
+                att_count = att_count + attendance_sheet_data.one_7.workday
             if attendance_sheet_data.one_8:
-                att_count = att_count + 1
+                att_count = att_count + attendance_sheet_data.one_8.workday
             if attendance_sheet_data.one_9:
-                att_count = att_count + 1
+                att_count = att_count + attendance_sheet_data.one_9.workday
             if attendance_sheet_data.one_0:
-                att_count = att_count + 1
+                att_count = att_count + attendance_sheet_data.one_0.workday
 
             if attendance_sheet_data.two_1:
-                att_count = att_count + 1
+                att_count = att_count + attendance_sheet_data.two_1.workday
             if attendance_sheet_data.two_2:
-                att_count = att_count + 1
+                att_count = att_count + attendance_sheet_data.two_2.workday
             if attendance_sheet_data.two_3:
-                att_count = att_count + 1
+                att_count = att_count + attendance_sheet_data.two_3.workday
             if attendance_sheet_data.two_4:
-                att_count = att_count + 1
+                att_count = att_count + attendance_sheet_data.two_4.workday
             if attendance_sheet_data.two_5:
-                att_count = att_count + 1
+                att_count = att_count + attendance_sheet_data.two_5.workday
             if attendance_sheet_data.two_6:
-                att_count = att_count + 1
+                att_count = att_count + attendance_sheet_data.two_6.workday
             if attendance_sheet_data.two_7:
-                att_count = att_count + 1
+                att_count = att_count + attendance_sheet_data.two_7.workday
             if attendance_sheet_data.two_8:
-                att_count = att_count + 1
+                att_count = att_count + attendance_sheet_data.two_8.workday
             if attendance_sheet_data.two_9:
-                att_count = att_count + 1
+                att_count = att_count + attendance_sheet_data.two_9.workday
             if attendance_sheet_data.two_0:
-                att_count = att_count + 1
+                att_count = att_count + attendance_sheet_data.two_0.workday
             if attendance_sheet_data.three_1:
-                att_count = att_count + 1
-            percentage = (float(att_count / 31.00)) * 100
-            attendance_sheet_data.percentage = percentage
+                att_count = att_count + attendance_sheet_data.three_1.workday
+            # percentage = (float(att_count / 31.00)) * 100
+            attendance_sheet_data.percentage = att_count
         return res
 
     roll_no = fields.Integer('STT', required=True,
@@ -167,14 +167,21 @@ class Attendance(models.Model):
     name = fields.Many2one('hr.employee','Nhân viên', required=True)
     position = fields.Char('Chức vụ', compute="get_position")
     month = fields.Integer(compute="get_month")
+    hide = fields.Boolean(compute="_compute_hide")
     
     @api.onchange('standard_id')
     def get_month(self):
         for rec in self:
             rec.month = rec.standard_id.month_id.name
-            print("=============")
-            print(rec.month)
-            
+
+    @api.onchange('standard_id.month_id.name')
+    def _compute_hide(self):
+        for rec in self:
+            if rec.standard_id.month_id.name == 2:
+                rec.hide = True
+            else:
+                rec.hide = False
+
     @api.depends('name')
     def get_position(self):
         for rec in self:
@@ -215,7 +222,7 @@ class Attendance(models.Model):
     two_0 = fields.Many2one('attendance.symbol', '30')
     three_1 = fields.Many2one('attendance.symbol', '31')
     percentage = fields.Float(compute="_compute_percentage", method=True,
-                              string='Ngày công (%)', store=False)
+                              string='Ngày công', store=False)
     
 class AttendanceYear(models.Model):
     '''Defines an academic year.'''
@@ -307,7 +314,7 @@ class AttendanceMonth(models.Model):
     _order = "name"
     _rec_name = "name"
 
-    name = fields.Integer('Name', required=True, help='Name of Academic month')
+    name = fields.Integer('Tháng', required=True, help='Name of Academic month')
     # code = fields.Char('Code', required=True, help='Code of Academic month')
     date_start = fields.Date('Start of Period', required=True,
                              help='Starting of academic month')

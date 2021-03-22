@@ -54,16 +54,17 @@
                                 <field name="two_6"/>
                                 <field name="two_7"/>
                                 <field name="two_8"/>
-                                <field name="two_9" attrs="{'column_invisible':[('month','=',2)]}"/>
+                                <field name="two_9" attrs="{'invisible':[('month', '=', 2)]}"/>
                                 <field name="two_0" attrs="{'invisible':[('month','=',2)]}"/>
                                 <field name="three_1" attrs="{'invisible':[('month','not in',[1,3,5,7,8,10,12])]}"/>
-                                <field name="percentage" widget="progressbar"/>
+                                <field name="percentage" />
                             </tree>
                             <form string="Monthly Attendance" editable="bottom" create="true" delete="true">
                                 <group col="6" colspan="4">
                                     <field name="roll_no"/>
                                     <field name="name"/>
                                     <field name="month" invisible="1"/>
+                                    <field name="hide" invisible="1"/>
                                     <newline/>
                                     <field name="one"/>
                                     <field name="two"/>
@@ -93,7 +94,7 @@
                                     <field name="two_6"/>
                                     <field name="two_7"/>
                                     <field name="two_8"/>
-                                    <field name="two_9" attrs="{'invisible':[('month','=',2)]}"/>
+                                    <field name="two_9" attrs="{'invisible':[('hide','=',True)]}"/>
                                     <field name="two_0" attrs="{'invisible':[('month','=',2)]}"/>
                                     <field name="three_1" attrs="{'invisible':[('month','not in',[1,3,5,7,8,10,12])]}"/>
                                 </group>
