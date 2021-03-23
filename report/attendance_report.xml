@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <report
+        id="attendance_xlsx"
+        model="attendance.sheet"
+        string="Print to XLSX"
+        report_type="xlsx"
+        name="attendance_custom.attendance_report"
+        file="attendance_sheet"
+        attachment_use="False"
+    />
+</odoo>

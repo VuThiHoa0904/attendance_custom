@@ -20,7 +20,7 @@
                 </group>
                 <notebook colspan="4">
                     <page string="Tính công">
-                        <field name="attendance_ids" nolabel="1" colspan="4">
+                        <field name="attendance_ids" nolabel="1" colspan="4" >
                             <tree string="Monthly Attendance" editable="bottom" create="true" delete="true">
                                 <field name="month" invisible="1"/>
                                 <field name="roll_no"/>
@@ -54,7 +54,7 @@
                                 <field name="two_6"/>
                                 <field name="two_7"/>
                                 <field name="two_8"/>
-                                <field name="two_9" attrs="{'invisible':[('month', '=', 2)]}"/>
+                                <field name="two_9" attrs="{'invisible': [('month','=',2)]}" />
                                 <field name="two_0" attrs="{'invisible':[('month','=',2)]}"/>
                                 <field name="three_1" attrs="{'invisible':[('month','not in',[1,3,5,7,8,10,12])]}"/>
                                 <field name="percentage" />

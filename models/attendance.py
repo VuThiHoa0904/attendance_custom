@@ -7,6 +7,7 @@ from odoo.tools import DEFAULT_SERVER_DATE_FORMAT
 from dateutil.relativedelta import relativedelta as rd
 from odoo.exceptions import ValidationError
 from lxml import etree
+import pandas as pd
 import json
 
 class AttendanceSheet(models.Model):
@@ -169,10 +170,12 @@ class Attendance(models.Model):
     month = fields.Integer(compute="get_month")
     hide = fields.Boolean(compute="_compute_hide")
     
-    @api.onchange('standard_id')
+    @api.depends('standard_id')
     def get_month(self):
         for rec in self:
             rec.month = rec.standard_id.month_id.name
+            print("========================")
+            print(rec.month)
 
     @api.onchange('standard_id.month_id.name')
     def _compute_hide(self):
@@ -359,6 +362,8 @@ class AttendanceMonth(models.Model):
                     self.date_stop <= old_month.date_stop:
                 raise ValidationError(_('''Error! You cannot define
                     overlapping months!'''))
+
+
 class AttendanceSymbol(models.Model):
     '''Defining Attendance Symbol.'''
     _name = "attendance.symbol"
@@ -369,3 +374,65 @@ class AttendanceSymbol(models.Model):
     name = fields.Char("Kí hiệu")
     description = fields.Char("Mô tả")
     workday = fields.Float("Ngày công")
+
+
+class PartnerXlsx(models.AbstractModel):
+    _name = 'report.attendance_custom.attendance_report'
+    _inherit = 'report.report_xlsx.abstract'
+
+    def checkYear(self, year):
+        return (((year % 4 == 0) and (year % 100 != 0)) or (year % 400 == 0));
+
+    def generate_xlsx_report(self, workbook, data, lines):
+        for obj in lines:
+            report_name = obj.name
+            # One sheet by partner
+            sheet = workbook.add_worksheet(report_name[:31])
+            name_header = workbook.add_format({'font_size': 20, 'align': 'center', 'bold': True, 'font_color': 'red', 'font_name': 'Times New Roman'})
+            sheet.set_row(0, 30)
+            sheet.merge_range('A1:AI1', 'BẢNG CHẤM CÔNG', name_header)
+            date_header = workbook.add_format({'font_size': 15, 'align': 'center', 'bold': True, 'font_color': 'red', 'font_name': 'Times New Roman'})
+            sheet.set_row(1, 20)
+            sheet.merge_range('A2:AI2', 'Tháng ' + str(obj.month_id.name)+' Năm ' + str(obj.year_id.name), date_header)
+
+            # Tiêu đề cột
+            title = workbook.add_format({'font_size': 13, 'align': 'center','bold': True, 'border': 1, 'font_color': 'black', 'font_name': 'Times New Roman'})
+            sheet.merge_range('A3:A5', 'TT', title)
+            sheet.set_column('A3:A5', 3)
+            sheet.merge_range('B3:B5', 'Họ và tên', title)
+            sheet.set_column('B3:B5', 10)
+            sheet.merge_range('C3:C5', 'Chức vụ/ Bộ phận', title)
+            sheet.set_column('C3:C5', 25)
+            sheet.merge_range('D3:AI3', 'Ngày trong tháng', title)
+            sheet.set_column('AI4:AI5', 25)
+            sheet.merge_range('AI4:AI5', 'Tổng cộng ngày công', title)
+            j = 1
+
+            if obj.month_id.name == 2:
+                for i in range(3, 31):
+                    sheet.set_column('AF:AH', options={'hidden': True})
+                    sheet.write(3, i, j, title)
+                    date = pd.DataFrame({'inputDate':[str(obj.year_id.name)+'-'+str(obj.month_id.name)+'-'+str(j)]})
+                    date['inputDate'] = pd.to_datetime(date['inputDate'])
+                    date['dayOfWeek'] = date['inputDate'].dt.day_name()
+                    # print("===============================")
+                    # print(date['dayOfWeek'].values[0])
+                    sheet.write(4, i, date['dayOfWeek'].values[0], title)
+                    j+=1
+            elif obj.month_id.name == 2 and checkYear(obj.year_id.name):
+                for i in range(3,32):
+                    sheet.write(3, i, j, title)
+                    j+=1
+            elif obj.month_id.name in [2,4,6,9,11]:
+                for i in range(3,33):
+                    sheet.write(3, i, j, title)
+                    j+=1
+            else:
+                for i in range(3,34):
+                    sheet.write(3, i, j, title)
+                    j+=1
+
+            # Nội dung
+
+            # sheet.write(0, 0, obj.name, bold)
+            # sheet.write(0, 1, obj.month_id.name, bold)
