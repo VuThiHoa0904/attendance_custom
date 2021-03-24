@@ -17,7 +17,7 @@ class AttendanceSheet(models.Model):
     _name = 'attendance.sheet'
 
     name = fields.Char('Mô tả',)
-    month_id = fields.Many2one('attendance.month', 'Tháng', required=True,)
+    month_id = fields.Many2one('attendance.month', 'Tháng', required=True, domain="[('year_id', '=?', year_id)]")
     year_id = fields.Many2one('attendance.year', 'Năm', required=True)
     attendance_ids = fields.One2many('attendance.sheet.line', 'standard_id',
                                      'Danh sách chấm công',)
@@ -167,20 +167,15 @@ class Attendance(models.Model):
     standard_id = fields.Many2one('attendance.sheet', 'Standard')
     name = fields.Many2one('hr.employee','Nhân viên', required=True)
     position = fields.Char('Chức vụ', compute="get_position")
-    month = fields.Integer(compute="get_month")
-    hide = fields.Boolean(compute="_compute_hide")
+    month = fields.Integer(related='standard_id.month_id.name')
+    year = fields.Integer(related='standard_id.year_id.name')
+    hide = fields.Boolean(compute="checkYear")
     
-    @api.depends('standard_id')
-    def get_month(self):
+    @api.model
+    @api.depends('year')
+    def checkYear(self):
         for rec in self:
-            rec.month = rec.standard_id.month_id.name
-            print("========================")
-            print(rec.month)
-
-    @api.onchange('standard_id.month_id.name')
-    def _compute_hide(self):
-        for rec in self:
-            if rec.standard_id.month_id.name == 2:
+            if (((rec.year % 4 == 0) and (rec.year % 100 != 0)) or (rec.year % 400 == 0)):
                 rec.hide = True
             else:
                 rec.hide = False
@@ -235,11 +230,11 @@ class AttendanceYear(models.Model):
     _order = "sequence"
 
     sequence = fields.Integer('Số TT', required=True,
-                              help="Sequence order you want to see this year.")
-    name = fields.Char('Năm', required=True, help='Name of academic year')
-    date_start = fields.Date('Ngày bắt đầu', required=True,
+                              help="Sắp xếp theo số thứ tự")
+    name = fields.Integer('Năm', required=True, help='Tên năm muốn nhập')
+    date_start = fields.Date('Ngày bắt đầu',
                              help='Ngày bắt dầu của năm')
-    date_stop = fields.Date('Ngày kết thúc', required=True,
+    date_stop = fields.Date('Ngày kết thúc',
                             help='Ngày kết thúc năm')
     month_ids = fields.One2many('attendance.month', 'year_id', 'Tháng',
                                 help="related Academic months")
@@ -319,13 +314,13 @@ class AttendanceMonth(models.Model):
 
     name = fields.Integer('Tháng', required=True, help='Name of Academic month')
     # code = fields.Char('Code', required=True, help='Code of Academic month')
-    date_start = fields.Date('Start of Period', required=True,
-                             help='Starting of academic month')
-    date_stop = fields.Date('End of Period', required=True,
-                            help='Ending of academic month')
-    year_id = fields.Many2one('attendance.year', 'Academic Year', required=True,
-                              help="Related academic year ")
-    description = fields.Text('Description')
+    date_start = fields.Date('Ngày bắt đầu',required=True,
+                             help='')
+    date_stop = fields.Date('Ngày kết thúc',required=True,
+                            help='')
+    year_id = fields.Many2one('attendance.year', 'Năm', required=True,
+                              help=" ")
+    description = fields.Text('Mô tả')
 
     _sql_constraints = [
         ('month_unique', 'unique(date_start, date_stop, year_id)',
@@ -381,12 +376,32 @@ class PartnerXlsx(models.AbstractModel):
     _inherit = 'report.report_xlsx.abstract'
 
     def checkYear(self, year):
-        return (((year % 4 == 0) and (year % 100 != 0)) or (year % 400 == 0));
+        return (((year % 4 == 0) and (year % 100 != 0)) or (year % 400 == 0))
+
+    def getDay(self, year, month, day):
+        date = pd.DataFrame({'inputDate': [str(year)+'-'+str(month)+'-'+str(day)]})
+        date['inputDate'] = pd.to_datetime(date['inputDate'])
+        date['dayOfWeek'] = date['inputDate'].dt.day_name()
+        if date['dayOfWeek'].values[0] == 'Monday':
+            date['dayOfWeek'].values[0] = 'T2'
+        if date['dayOfWeek'].values[0] == 'Tuesday':
+            date['dayOfWeek'].values[0] = 'T3'
+        if date['dayOfWeek'].values[0] == 'Wednesday':
+            date['dayOfWeek'].values[0] = 'T4'
+        if date['dayOfWeek'].values[0] == 'Thursday':
+            date['dayOfWeek'].values[0] = 'T5'
+        if date['dayOfWeek'].values[0] == 'Friday':
+            date['dayOfWeek'].values[0] = 'T6'
+        if date['dayOfWeek'].values[0] == 'Saturday':
+            date['dayOfWeek'].values[0] = 'T7'
+        if date['dayOfWeek'].values[0] == 'Sunday':
+            date['dayOfWeek'].values[0] = 'CN'
+        return date['dayOfWeek'].values[0]
 
     def generate_xlsx_report(self, workbook, data, lines):
         for obj in lines:
             report_name = obj.name
-            # One sheet by partner
+            # Tạo sheet mới
             sheet = workbook.add_worksheet(report_name[:31])
             name_header = workbook.add_format({'font_size': 20, 'align': 'center', 'bold': True, 'font_color': 'red', 'font_name': 'Times New Roman'})
             sheet.set_row(0, 30)
@@ -396,13 +411,14 @@ class PartnerXlsx(models.AbstractModel):
             sheet.merge_range('A2:AI2', 'Tháng ' + str(obj.month_id.name)+' Năm ' + str(obj.year_id.name), date_header)
 
             # Tiêu đề cột
-            title = workbook.add_format({'font_size': 13, 'align': 'center','bold': True, 'border': 1, 'font_color': 'black', 'font_name': 'Times New Roman'})
+            title = workbook.add_format({'font_size': 12, 'align': 'center','bold': True, 'border': 1, 'font_color': 'black', 'font_name': 'Times New Roman','bg_color':'#00FFFF'})
             sheet.merge_range('A3:A5', 'TT', title)
             sheet.set_column('A3:A5', 3)
             sheet.merge_range('B3:B5', 'Họ và tên', title)
-            sheet.set_column('B3:B5', 10)
+            sheet.set_column('B3:B5', 20)
             sheet.merge_range('C3:C5', 'Chức vụ/ Bộ phận', title)
             sheet.set_column('C3:C5', 25)
+            sheet.set_row(2, 20)
             sheet.merge_range('D3:AI3', 'Ngày trong tháng', title)
             sheet.set_column('AI4:AI5', 25)
             sheet.merge_range('AI4:AI5', 'Tổng cộng ngày công', title)
@@ -412,27 +428,110 @@ class PartnerXlsx(models.AbstractModel):
                 for i in range(3, 31):
                     sheet.set_column('AF:AH', options={'hidden': True})
                     sheet.write(3, i, j, title)
-                    date = pd.DataFrame({'inputDate':[str(obj.year_id.name)+'-'+str(obj.month_id.name)+'-'+str(j)]})
-                    date['inputDate'] = pd.to_datetime(date['inputDate'])
-                    date['dayOfWeek'] = date['inputDate'].dt.day_name()
-                    # print("===============================")
-                    # print(date['dayOfWeek'].values[0])
-                    sheet.write(4, i, date['dayOfWeek'].values[0], title)
-                    j+=1
+                    sheet.write(4, i, self.getDay(obj.year_id.name, obj.month_id.name, j), title)
+                    j +=1
             elif obj.month_id.name == 2 and checkYear(obj.year_id.name):
                 for i in range(3,32):
+                    sheet.set_column('AG:AH', options={'hidden': True})
                     sheet.write(3, i, j, title)
+                    sheet.write(4, i, self.getDay(obj.year_id.name, obj.month_id.name, j), title)
                     j+=1
             elif obj.month_id.name in [2,4,6,9,11]:
                 for i in range(3,33):
+                    sheet.set_column('AH:AH', options={'hidden': True})
                     sheet.write(3, i, j, title)
+                    sheet.write(4, i, self.getDay(obj.year_id.name, obj.month_id.name, j), title)
                     j+=1
             else:
                 for i in range(3,34):
                     sheet.write(3, i, j, title)
+                    sheet.write(4, i, self.getDay(obj.year_id.name, obj.month_id.name, j), title)
                     j+=1
 
-            # Nội dung
+            # Xuất ngày công
+            content = workbook.add_format({'font_size': 12, 'align': 'center','bold': False, 'border': 1, 'font_color': 'black', 'font_name': 'Times New Roman'})
+            k = 5
+            no = 1
+            for rec in obj.attendance_ids:
+                sheet.write(k, 0, no, content)
+                sheet.write(k, 1, rec.name.name, content)
+                sheet.write(k, 2, rec.position, content)
+                sheet.write(k, 3, rec.one.name, content)
+                sheet.write(k, 4, rec.two.name, content)
+                sheet.write(k, 5, rec.three.name, content)
+                sheet.write(k, 6, rec.four.name, content)
+                sheet.write(k, 7, rec.five.name, content)
+                sheet.write(k, 8, rec.six.name, content)
+                sheet.write(k, 9, rec.seven.name, content)
+                sheet.write(k, 10, rec.eight.name, content)
+                sheet.write(k, 11, rec.nine.name, content)
+                sheet.write(k, 12, rec.ten.name, content)
 
+                sheet.write(k, 13, rec.one_1.name, content)
+                sheet.write(k, 14, rec.one_2.name, content)
+                sheet.write(k, 15, rec.one_3.name, content)
+                sheet.write(k, 16, rec.one_4.name, content)
+                sheet.write(k, 17, rec.one_5.name, content)
+                sheet.write(k, 18, rec.one_6.name, content)
+                sheet.write(k, 19, rec.one_7.name, content)
+                sheet.write(k, 20, rec.one_8.name, content)
+                sheet.write(k, 21, rec.one_9.name, content)
+                sheet.write(k, 22, rec.one_0.name, content)
+
+                sheet.write(k, 23, rec.two_1.name, content)
+                sheet.write(k, 24, rec.two_2.name, content)
+                sheet.write(k, 25, rec.two_3.name, content)
+                sheet.write(k, 26, rec.two_4.name, content)
+                sheet.write(k, 27, rec.two_5.name, content)
+                sheet.write(k, 28, rec.two_6.name, content)
+                sheet.write(k, 29, rec.two_7.name, content)
+                sheet.write(k, 30, rec.two_8.name, content)
+                sheet.write(k, 31, rec.two_9.name, content)
+                sheet.write(k, 32, rec.two_0.name, content)
+                sheet.write(k, 33, rec.three_1.name, content)
+                sheet.write(k, 34, rec.percentage, content)
+                k+=1
+                no+=1
+
+            # footer
+
+            title2 = workbook.add_format({'font_size': 12, 'align': 'center','bold': True, 'font_color': 'black', 'font_name': 'Times New Roman'})
+            content2 = workbook.add_format({'font_size': 12, 'align': 'left','bold': False, 'font_color': 'black', 'font_name': 'Times New Roman'})
+            content3 = workbook.add_format({'font_size': 12, 'align': 'center','bold': False, 'italic': True, 'font_color': 'black', 'font_name': 'Times New Roman'})
+
+            sheet.write(17, 1, "Kí hiệu chấm công:", title2)
+            sheet.write(18, 1, "- Ốm, điều dưỡng:", content2)
+            sheet.write(19, 1, "- Con ốm:", content2)
+            sheet.write(20, 1, "- Thai sản:", content2)
+            sheet.write(21, 1, "- Tai nạn:", content2)
+            sheet.write(22, 1, "- Chủ nhật", content2)
+            sheet.write(23, 1, "- Nghỉ lễ", content2)
+
+            sheet.write(18, 2, "Ô", content2)
+            sheet.write(19, 2, "Cô", content2)
+            sheet.write(20, 2, "TS", content2)
+            sheet.write(21, 2, "T", content2)
+            sheet.write(22, 2, "CN", content2)
+            sheet.write(23, 2, "NL", content2)
+
+            sheet.merge_range('E19:G19', '- Nghỉ nửa ngày không lương:', content2)
+            sheet.merge_range('E20:G20', '- Nghỉ không lương:', content2)
+            sheet.merge_range('E21:G21', '- Ngừng việc:', content2)
+            sheet.merge_range('E22:G22', '- Nghỉ phép:', content2)
+            sheet.merge_range('E23:G23', '- Nghỉ nửa ngày tính phép', content2)
+            sheet.merge_range('E24:G24', '- Làm cả ngày :', content2)
+
+            sheet.write(18, 7, "-", content2)
+            sheet.write(19, 7, "0", content2)
+            sheet.write(20, 7, "N", content2)
+            sheet.write(21, 7, "P", content2)
+            sheet.write(22, 7, "1/2P", content2)
+            sheet.write(23, 7, "+", content2)
+
+            sheet.merge_range('Z19:AC19', 'Thái Ngyên, ngày       tháng '+str(obj.month_id.name)+' năm '+str(obj.year_id.name), title2)
+            sheet.merge_range('V20:Z20', 'Người chấm công', title2)
+            sheet.merge_range('V21:Z21', '(Ký, họ tên)', content3)
+            sheet.merge_range('AC20:AG20', 'Giám đốc', title2)
+            sheet.merge_range('AC21:AG21', '(Ký, họ tên)', content3)
             # sheet.write(0, 0, obj.name, bold)
             # sheet.write(0, 1, obj.month_id.name, bold)

@@ -3,10 +3,10 @@
     <report
         id="attendance_xlsx"
         model="attendance.sheet"
-        string="Print to XLSX"
+        string="Xuất file chấm công"
         report_type="xlsx"
         name="attendance_custom.attendance_report"
-        file="attendance_sheet"
+        file="Bảng chấm công"
         attachment_use="False"
     />
 </odoo>
