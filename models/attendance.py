@@ -82,7 +82,7 @@ class AttendanceSheet(models.Model):
         #         res['fields']['attendance_ids'
         #                       ]['views']['tree']['arch'] = etree.tostring(doc2)
         return res
-class Attendance(models.Model):
+class AttendanceLine(models.Model):
     _description = 'Attendance Sheet Line'
     _name = 'attendance.sheet.line'
     _order = 'roll_no'
@@ -172,6 +172,64 @@ class Attendance(models.Model):
     hide = fields.Boolean(compute="checkYear")
     
     @api.model
+    def create(self, days):
+        days.update({'year': days.get('year')})
+        days.update({'month': days.get('month')})
+        CN = self.env['attendance.symbol'].search([('name','=','CN')],limit=1).id
+        NL = self.env['attendance.symbol'].search([('name','=','NL')],limit=1).id
+        attendance = self.env['attendance.sheet'].search([('id','=',days['standard_id'])],limit=1)
+        arr = ['one', 'two', 'three', 'four', 'five', 'six', 'seven', 'eight', 'nine', 'ten', 'one_1', 'one_2', 'one_3', 'one_4', 'one_5', 'one_6', 'one_7',
+           'one_8', 'one_9', 'one_0', 'two_1', 'two_2', 'two_3', 'two_4', 'two_5', 'two_6', 'two_7', 'two_8', 'two_9', 'two_0', 'three_1']
+        a = [1, 3, 5, 7, 8, 10, 12]
+        b = [4, 6, 9, 11]
+        year = attendance.year_id.name
+        month = attendance.month_id.name
+        if month in a:
+            for i in range(0,len(arr)):
+                day = self._fields[arr[i]].string
+                if self.checkDay(year, month, day) == 'Sunday':
+                    days[arr[i]] = CN
+                if ((month == 5) and (day == '1')) or ((month == 1) and (day == '1')):
+                    days[arr[i]] = NL
+        if month in b:
+            for i in range(0,len(arr)-1):
+                day = self._fields[arr[i]].string
+                if self.checkDay(year, month, day) == 'Sunday':
+                    days[arr[i]] = CN
+                if ((month == 4) and (day == '30')) or ((month == 9) and (day == '2')):
+                    days[arr[i]] = NL
+        if month == 2:
+            if (((year % 4 == 0) and (year % 100 != 0)) or (year % 400 == 0)):
+                for i in range(0, len(arr)-2):
+                    day = self._fields[arr[i]].string
+                    if self.checkDay(year, month, day) == 'Sunday':
+                        days[arr[i]] = CN
+            else:
+                for i in range(0, len(arr)-3):
+                    day = self._fields[arr[i]].string
+                    if self.checkDay(year, month, day) == 'Sunday':
+                        days[arr[i]] = CN
+        result = super(AttendanceLine, self).create(days)
+        return result
+    
+    def checkDay(self, year, month, day):
+        date = pd.DataFrame({'inputDate': [str(year)+'-'+str(month)+'-'+str(day)]})
+        date['inputDate'] = pd.to_datetime(date['inputDate'])
+        date['dayOfWeek'] = date['inputDate'].dt.day_name()
+        return date['dayOfWeek'].values[0]
+
+    # @api.onchange('standard_id.month_id.name')
+    @api.model
+    def get_symbol(self):
+        # super(AttendanceLine, self).get_symbol()
+        for rec in self:
+            # print("===================")
+            # print(rec._fields['seven'].string)
+            # print(rec.checkDay(rec.year, rec.month, rec._fields['seven'].string))
+            if rec.checkDay(rec.year, rec.month, rec._fields['seven'].string) == 'Sunday':
+                rec.seven.name = 'CN'
+                # print(rec.seven.name)
+    @api.model
     @api.depends('year')
     def checkYear(self):
         for rec in self:
@@ -185,16 +243,15 @@ class Attendance(models.Model):
         for rec in self:
             rec.position = rec.name.job_title
 
-    def get_symbol_default(self):
-        self.three.name = '+'
-
+    # def get_symbol_default(self):
+    #     self.three.name = '+'
     one = fields.Many2one('attendance.symbol', '1')
     two = fields.Many2one('attendance.symbol', '2')
     three = fields.Many2one('attendance.symbol', '3')
     four = fields.Many2one('attendance.symbol', '4')
     five = fields.Many2one('attendance.symbol', '5')
-    seven = fields.Many2one('attendance.symbol', '6')
-    six = fields.Many2one('attendance.symbol', '7')
+    six = fields.Many2one('attendance.symbol', '6')
+    seven = fields.Many2one('attendance.symbol', '7')
     eight = fields.Many2one('attendance.symbol', '8')
     nine = fields.Many2one('attendance.symbol', '9')
     ten = fields.Many2one('attendance.symbol', '10')
@@ -369,6 +426,11 @@ class AttendanceSymbol(models.Model):
     name = fields.Char("Kí hiệu")
     description = fields.Char("Mô tả")
     workday = fields.Float("Ngày công")
+    # @api.model
+    # def create(self, vals):
+    #     print("===================")
+    #     result = super(AttendanceSymbol, self).create(vals)
+    #     return result
 
 
 class PartnerXlsx(models.AbstractModel):

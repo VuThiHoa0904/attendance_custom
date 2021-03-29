@@ -34,7 +34,7 @@
                                 <field name="four"/>
                                 <field name="five"/>
                                 <field name="six"/>
-                                <field name="seven"/>
+                                <field name="seven" on_change="1"/>
                                 <field name="eight"/>
                                 <field name="nine"/>
                                 <field name="ten"/>
