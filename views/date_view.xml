@@ -1,31 +1,31 @@
 <?xml version="1.0" encoding="utf-8"?>
 <odoo>
 
-    <record id="view_attendance_month_tree" model="ir.ui.view">
-        <field name="name">attendance.month.tree</field>
-        <field name="model">attendance.month</field>
-        <field name="arch" type="xml">
-            <tree string="Tháng" editable="bottom">
-                <field name="name" placeholder="Tháng"/>
-                <field name="date_start" placeholder="Ngày bắt đầu"/>
-                <field name="date_stop" placeholder="Ngày kết thúc"/>
-                <field name="year_id" placeholder="Năm"/>
-                <field name="description" placeholder="Mô tả"/>
-            </tree>
-        </field>
-    </record>
+<!--    <record id="view_attendance_month_tree" model="ir.ui.view">-->
+<!--        <field name="name">attendance.month.tree</field>-->
+<!--        <field name="model">attendance.month</field>-->
+<!--        <field name="arch" type="xml">-->
+<!--            <tree string="Tháng" editable="bottom">-->
+<!--                <field name="name" placeholder="Tháng"/>-->
+<!--                <field name="date_start" placeholder="Ngày bắt đầu"/>-->
+<!--                <field name="date_stop" placeholder="Ngày kết thúc"/>-->
+<!--                <field name="year_id" placeholder="Năm"/>-->
+<!--                <field name="description" placeholder="Mô tả"/>-->
+<!--            </tree>-->
+<!--        </field>-->
+<!--    </record>-->
     <!-- Action Of Form & Tree Views Of Academic Year Information -->
     <record id="action_attendance_year_form" model="ir.actions.act_window">
         <field name="name">Năm</field>
         <field name="res_model">attendance.year</field>
         <field name="view_mode">tree,form</field>
     </record>
-    <!-- Action Of Form & Tree Views Of Academic Month Information -->
-    <record id="action_attendance_month_form" model="ir.actions.act_window">
-        <field name="name">Tháng</field>
-        <field name="res_model">attendance.month</field>
-        <field name="view_mode">tree,form</field>
-    </record>
+<!--    &lt;!&ndash; Action Of Form & Tree Views Of Academic Month Information &ndash;&gt;-->
+<!--    <record id="action_attendance_month_form" model="ir.actions.act_window">-->
+<!--        <field name="name">Tháng</field>-->
+<!--        <field name="res_model">attendance.month</field>-->
+<!--        <field name="view_mode">tree,form</field>-->
+<!--    </record>-->
 
     <record id="view_attendance_sysbol_tree" model="ir.ui.view">
         <field name="name">attendance.symbol.tree</field>

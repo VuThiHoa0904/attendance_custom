@@ -16,7 +16,8 @@
                 <newline/>
                 <group col="4">
                     <field name="year_id" widget="selection" colspan="2" />
-                    <field name="month_id" widget="selection" colspan="2" />
+<!--                    <field name="month_id" widget="selection" colspan="2" />-->
+                    <field name="month" widget="selection" colspan="2" />
                 </group>
                 <notebook colspan="4">
                     <page string="Tính công">
@@ -56,9 +57,9 @@
                                 <field name="two_6"/>
                                 <field name="two_7"/>
                                 <field name="two_8"/>
-                                <field name="two_9" attrs="{'invisible': ['&amp;',('month','=',2),('hide','=',False)]}" />
-                                <field name="two_0" attrs="{'invisible':[('month','=',2)]}"/>
-                                <field name="three_1" attrs="{'invisible':[('month','not in',[1,3,5,7,8,10,12])]}"/>
+                                <field name="two_9" attrs="{'invisible': ['&amp;',('month','=','2'),('hide','=',False)]}" />
+                                <field name="two_0" attrs="{'invisible':[('month','=','2')]}"/>
+                                <field name="three_1" attrs="{'invisible':[('month','not in',['1','3','5','7','8','10','12'])]}"/>
                                 <field name="percentage" />
                             </tree>
                             <form string="Monthly Attendance" editable="bottom" create="true" delete="true">
@@ -97,8 +98,8 @@
                                     <field name="two_7"/>
                                     <field name="two_8"/>
                                     <field name="two_9" attrs="{'invisible':[('hide','=',True)]}"/>
-                                    <field name="two_0" attrs="{'invisible':[('month','=',2)]}"/>
-                                    <field name="three_1" attrs="{'invisible':[('month','not in',[1,3,5,7,8,10,12])]}"/>
+                                    <field name="two_0" attrs="{'invisible':[('month','=','2')]}"/>
+                                    <field name="three_1" attrs="{'invisible':[('month','not in',['1','3','5','7','8','10','12'])]}"/>
                                 </group>
                             </form>
                         </field>
@@ -117,7 +118,7 @@
             <tree string="Attendance Sheet" >
                 <field name="name"/>
 <!--                <field name="standard_id"/>-->
-                <field name="month_id"/>
+                <field name="month"/>
                 <field name="year_id"/>
             </tree>
         </field>
@@ -159,11 +160,11 @@
                   parent="menu_attendance_config"
                   action="action_attendance_year_form"
         />
-    <menuitem id="menu_attendance_month" name="Tháng"
-                  sequence="5"
-                  parent="menu_attendance_config"
-                  action="action_attendance_month_form"
-        />
+<!--    <menuitem id="menu_attendance_month" name="Tháng"-->
+<!--                  sequence="5"-->
+<!--                  parent="menu_attendance_config"-->
+<!--                  action="action_attendance_month_form"-->
+<!--        />-->
     <menuitem id="menu_attendance_symbol" name="Kí hiệu chấm công"
                   sequence="6"
                   parent="menu_attendance_config"

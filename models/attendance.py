@@ -17,7 +17,9 @@ class AttendanceSheet(models.Model):
     _name = 'attendance.sheet'
 
     name = fields.Char('Mô tả',)
-    month_id = fields.Many2one('attendance.month', 'Tháng', required=True, domain="[('year_id', '=?', year_id)]")
+    # month_id = fields.Many2one('attendance.month', 'Tháng', required=True, domain="[('year_id', '=?', year_id)]")
+    month = fields.Selection([('1', '1'), ('2', '2'), ('3', '3'), ('4', '4'), ('5', '5'), ('6', '6'), ('7', '7'), ('8', '8'), ('9', '9'), ('10', '10'), ('11', '11'),
+                              ('12', '12')], 'Tháng', required=True)
     year_id = fields.Many2one('attendance.year', 'Năm', required=True)
     attendance_ids = fields.One2many('attendance.sheet.line', 'standard_id',
                                      'Danh sách chấm công',)
@@ -167,7 +169,7 @@ class AttendanceLine(models.Model):
     standard_id = fields.Many2one('attendance.sheet', 'Standard')
     name = fields.Many2one('hr.employee','Nhân viên', required=True)
     position = fields.Char('Chức vụ', compute="get_position")
-    month = fields.Integer(related='standard_id.month_id.name')
+    month = fields.Selection(related='standard_id.month')
     year = fields.Integer(related='standard_id.year_id.name')
     hide = fields.Boolean(compute="checkYear")
     
@@ -183,7 +185,7 @@ class AttendanceLine(models.Model):
         a = [1, 3, 5, 7, 8, 10, 12]
         b = [4, 6, 9, 11]
         year = attendance.year_id.name
-        month = attendance.month_id.name
+        month = int(attendance.month)
         if month in a:
             for i in range(0,len(arr)):
                 day = self._fields[arr[i]].string
@@ -195,6 +197,10 @@ class AttendanceLine(models.Model):
             for i in range(0,len(arr)-1):
                 day = self._fields[arr[i]].string
                 if self.checkDay(year, month, day) == 'Sunday':
+                    print("============")
+                    print(day)
+                    print(month)
+                    print(year)
                     days[arr[i]] = CN
                 if ((month == 4) and (day == '30')) or ((month == 9) and (day == '2')):
                     days[arr[i]] = NL
@@ -211,6 +217,7 @@ class AttendanceLine(models.Model):
                         days[arr[i]] = CN
         result = super(AttendanceLine, self).create(days)
         return result
+
     
     def checkDay(self, year, month, day):
         date = pd.DataFrame({'inputDate': [str(year)+'-'+str(month)+'-'+str(day)]})
@@ -221,14 +228,9 @@ class AttendanceLine(models.Model):
     # @api.onchange('standard_id.month_id.name')
     @api.model
     def get_symbol(self):
-        # super(AttendanceLine, self).get_symbol()
         for rec in self:
-            # print("===================")
-            # print(rec._fields['seven'].string)
-            # print(rec.checkDay(rec.year, rec.month, rec._fields['seven'].string))
             if rec.checkDay(rec.year, rec.month, rec._fields['seven'].string) == 'Sunday':
                 rec.seven.name = 'CN'
-                # print(rec.seven.name)
     @api.model
     @api.depends('year')
     def checkYear(self):
@@ -243,8 +245,10 @@ class AttendanceLine(models.Model):
         for rec in self:
             rec.position = rec.name.job_title
 
-    # def get_symbol_default(self):
-    #     self.three.name = '+'
+    _defaults = {
+        'one': lambda *a: '+'
+    }
+
     one = fields.Many2one('attendance.symbol', '1')
     two = fields.Many2one('attendance.symbol', '2')
     three = fields.Many2one('attendance.symbol', '3')
@@ -289,12 +293,6 @@ class AttendanceYear(models.Model):
     sequence = fields.Integer('Số TT', required=True,
                               help="Sắp xếp theo số thứ tự")
     name = fields.Integer('Năm', required=True, help='Tên năm muốn nhập')
-    date_start = fields.Date('Ngày bắt đầu',
-                             help='Ngày bắt dầu của năm')
-    date_stop = fields.Date('Ngày kết thúc',
-                            help='Ngày kết thúc năm')
-    month_ids = fields.One2many('attendance.month', 'year_id', 'Tháng',
-                                help="related Academic months")
     current = fields.Boolean('Năm hiện tại', help="Năm hiện tại")
     description = fields.Text('Mô tả')
 
@@ -311,47 +309,47 @@ class AttendanceYear(models.Model):
     #     '''Method to display name and code'''
     #     return [(rec.id, ' [' + rec.code + ']' + rec.name) for rec in self]
 
-    def generate_academicmonth(self):
-        """Generate academic months."""
-        interval = 1
-        month_obj = self.env['academic.month']
-        for data in self:
-            ds = data.date_start
-            while ds < data.date_stop:
-                de = ds + relativedelta(months=interval, days=-1)
-                if de > data.date_stop:
-                    de = data.date_stop
-                month_obj.create({
-                    'name': ds.strftime('%B'),
-                    'code': ds.strftime('%m/%Y'),
-                    'date_start': ds.strftime('%Y-%m-%d'),
-                    'date_stop': de.strftime('%Y-%m-%d'),
-                    'year_id': data.id,
-                })
-                ds = ds + relativedelta(months=interval)
-        return True
+    # def generate_academicmonth(self):
+    #     """Generate academic months."""
+    #     interval = 1
+    #     month_obj = self.env['academic.month']
+    #     for data in self:
+    #         ds = data.date_start
+    #         while ds < data.date_stop:
+    #             de = ds + relativedelta(months=interval, days=-1)
+    #             if de > data.date_stop:
+    #                 de = data.date_stop
+    #             month_obj.create({
+    #                 'name': ds.strftime('%B'),
+    #                 'code': ds.strftime('%m/%Y'),
+    #                 'date_start': ds.strftime('%Y-%m-%d'),
+    #                 'date_stop': de.strftime('%Y-%m-%d'),
+    #                 'year_id': data.id,
+    #             })
+    #             ds = ds + relativedelta(months=interval)
+    #     return True
 
-    @api.constrains('date_start', 'date_stop')
-    def _check_academic_year(self):
-        '''Method to check start date should be greater than end date
-           also check that dates are not overlapped with existing academic
-           year'''
-        new_start_date = self.date_start
-        new_stop_date = self.date_stop
-        delta = new_stop_date - new_start_date
-        if delta.days > 365 and not calendar.isleap(new_start_date.year):
-            raise ValidationError(_('''Error! The duration of the academic year
-                                      is invalid.'''))
-        if (self.date_stop and self.date_start and
-                self.date_stop < self.date_start):
-            raise ValidationError(_('''The start date of the academic year'
-                                      should be less than end date.'''))
-        for old_ac in self.search([('id', 'not in', self.ids)]):
-            # Check start date should be less than stop date
-            if (old_ac.date_start <= self.date_start <= old_ac.date_stop or
-                    old_ac.date_start <= self.date_stop <= old_ac.date_stop):
-                raise ValidationError(_('''Error! You cannot define overlapping
-                                          academic years.'''))
+    # @api.constrains('date_start', 'date_stop')
+    # def _check_academic_year(self):
+    #     '''Method to check start date should be greater than end date
+    #        also check that dates are not overlapped with existing academic
+    #        year'''
+    #     new_start_date = self.date_start
+    #     new_stop_date = self.date_stop
+    #     delta = new_stop_date - new_start_date
+    #     if delta.days > 365 and not calendar.isleap(new_start_date.year):
+    #         raise ValidationError(_('''Error! The duration of the academic year
+    #                                   is invalid.'''))
+    #     if (self.date_stop and self.date_start and
+    #             self.date_stop < self.date_start):
+    #         raise ValidationError(_('''The start date of the academic year'
+    #                                   should be less than end date.'''))
+    #     for old_ac in self.search([('id', 'not in', self.ids)]):
+    #         # Check start date should be less than stop date
+    #         if (old_ac.date_start <= self.date_start <= old_ac.date_stop or
+    #                 old_ac.date_start <= self.date_stop <= old_ac.date_stop):
+    #             raise ValidationError(_('''Error! You cannot define overlapping
+    #                                       academic years.'''))
 
     @api.constrains('current')
     def check_current_year(self):
@@ -361,59 +359,59 @@ class AttendanceYear(models.Model):
 year active!'''))
 
 
-class AttendanceMonth(models.Model):
-    '''Defining a month of an academic year.'''
-
-    _name = "attendance.month"
-    _description = "Academic Month"
-    _order = "name"
-    _rec_name = "name"
-
-    name = fields.Integer('Tháng', required=True, help='Name of Academic month')
-    # code = fields.Char('Code', required=True, help='Code of Academic month')
-    date_start = fields.Date('Ngày bắt đầu',required=True,
-                             help='')
-    date_stop = fields.Date('Ngày kết thúc',required=True,
-                            help='')
-    year_id = fields.Many2one('attendance.year', 'Năm', required=True,
-                              help=" ")
-    description = fields.Text('Mô tả')
-
-    _sql_constraints = [
-        ('month_unique', 'unique(date_start, date_stop, year_id)',
-         'Academic Month should be unique!'),
-    ]
-
-    @api.constrains('date_start', 'date_stop')
-    def _check_duration(self):
-        '''Method to check duration of date'''
-        if (self.date_stop and self.date_start and
-                self.date_stop < self.date_start):
-            raise ValidationError(_(''' End of Period date should be greater
-                                    than Start of Peroid Date!'''))
-
-    @api.constrains('year_id', 'date_start', 'date_stop')
-    def _check_year_limit(self):
-        '''Method to check year limit'''
-        if self.year_id and self.date_start and self.date_stop:
-            if (self.year_id.date_stop < self.date_stop or
-                    self.year_id.date_stop < self.date_start or
-                    self.year_id.date_start > self.date_start or
-                    self.year_id.date_start > self.date_stop):
-                raise ValidationError(_('''Invalid Months ! Some months overlap
-                                    or the date period is not in the scope
-                                    of the academic year!'''))
-
-    @api.constrains('date_start', 'date_stop')
-    def check_months(self):
-        """Check start date should be less than stop date."""
-        for old_month in self.search([('id', 'not in', self.ids)]):
-            if old_month.date_start <= \
-                    self.date_start <= old_month.date_stop \
-                    or old_month.date_start <= \
-                    self.date_stop <= old_month.date_stop:
-                raise ValidationError(_('''Error! You cannot define
-                    overlapping months!'''))
+# class AttendanceMonth(models.Model):
+#     '''Defining a month of an academic year.'''
+#
+#     _name = "attendance.month"
+#     _description = "Academic Month"
+#     _order = "name"
+#     _rec_name = "name"
+#
+#     name = fields.Integer('Tháng', required=True, help='Name of Academic month')
+#     # code = fields.Char('Code', required=True, help='Code of Academic month')
+#     date_start = fields.Date('Ngày bắt đầu',
+#                              help='')
+#     date_stop = fields.Date('Ngày kết thúc',
+#                             help='')
+#     year_id = fields.Many2one('attendance.year', 'Năm', required=True,
+#                               help=" ")
+#     description = fields.Text('Mô tả')
+#
+#     _sql_constraints = [
+#         ('month_unique', 'unique(date_start, date_stop, year_id)',
+#          'Academic Month should be unique!'),
+#     ]
+#
+#     @api.constrains('date_start', 'date_stop')
+#     def _check_duration(self):
+#         '''Method to check duration of date'''
+#         if (self.date_stop and self.date_start and
+#                 self.date_stop < self.date_start):
+#             raise ValidationError(_(''' End of Period date should be greater
+#                                     than Start of Peroid Date!'''))
+#
+#     @api.constrains('year_id', 'date_start', 'date_stop')
+#     def _check_year_limit(self):
+#         '''Method to check year limit'''
+#         if self.year_id and self.date_start and self.date_stop:
+#             if (self.year_id.date_stop < self.date_stop or
+#                     self.year_id.date_stop < self.date_start or
+#                     self.year_id.date_start > self.date_start or
+#                     self.year_id.date_start > self.date_stop):
+#                 raise ValidationError(_('''Invalid Months ! Some months overlap
+#                                     or the date period is not in the scope
+#                                     of the academic year!'''))
+#
+#     @api.constrains('date_start', 'date_stop')
+#     def check_months(self):
+#         """Check start date should be less than stop date."""
+#         for old_month in self.search([('id', 'not in', self.ids)]):
+#             if old_month.date_start <= \
+#                     self.date_start <= old_month.date_stop \
+#                     or old_month.date_start <= \
+#                     self.date_stop <= old_month.date_stop:
+#                 raise ValidationError(_('''Error! You cannot define
+#                     overlapping months!'''))
 
 
 class AttendanceSymbol(models.Model):
@@ -426,12 +424,6 @@ class AttendanceSymbol(models.Model):
     name = fields.Char("Kí hiệu")
     description = fields.Char("Mô tả")
     workday = fields.Float("Ngày công")
-    # @api.model
-    # def create(self, vals):
-    #     print("===================")
-    #     result = super(AttendanceSymbol, self).create(vals)
-    #     return result
-
 
 class PartnerXlsx(models.AbstractModel):
     _name = 'report.attendance_custom.attendance_report'
@@ -463,14 +455,16 @@ class PartnerXlsx(models.AbstractModel):
     def generate_xlsx_report(self, workbook, data, lines):
         for obj in lines:
             report_name = obj.name
+
             # Tạo sheet mới
             sheet = workbook.add_worksheet(report_name[:31])
+
             name_header = workbook.add_format({'font_size': 20, 'align': 'center', 'bold': True, 'font_color': 'red', 'font_name': 'Times New Roman'})
             sheet.set_row(0, 30)
             sheet.merge_range('A1:AI1', 'BẢNG CHẤM CÔNG', name_header)
             date_header = workbook.add_format({'font_size': 15, 'align': 'center', 'bold': True, 'font_color': 'red', 'font_name': 'Times New Roman'})
             sheet.set_row(1, 20)
-            sheet.merge_range('A2:AI2', 'Tháng ' + str(obj.month_id.name)+' Năm ' + str(obj.year_id.name), date_header)
+            sheet.merge_range('A2:AI2', 'Tháng ' + obj.month+' Năm ' + str(obj.year_id.name), date_header)
 
             # Tiêu đề cột
             title = workbook.add_format({'font_size': 12, 'align': 'center','bold': True, 'border': 1, 'font_color': 'black', 'font_name': 'Times New Roman','bg_color':'#00FFFF'})
@@ -486,28 +480,28 @@ class PartnerXlsx(models.AbstractModel):
             sheet.merge_range('AI4:AI5', 'Tổng cộng ngày công', title)
             j = 1
 
-            if obj.month_id.name == 2:
+            if obj.month == '2':
                 for i in range(3, 31):
                     sheet.set_column('AF:AH', options={'hidden': True})
                     sheet.write(3, i, j, title)
-                    sheet.write(4, i, self.getDay(obj.year_id.name, obj.month_id.name, j), title)
+                    sheet.write(4, i, self.getDay(obj.year_id.name, obj.month, j), title)
                     j +=1
-            elif obj.month_id.name == 2 and checkYear(obj.year_id.name):
+            elif obj.month == '2' and checkYear(obj.year_id.name):
                 for i in range(3,32):
                     sheet.set_column('AG:AH', options={'hidden': True})
                     sheet.write(3, i, j, title)
-                    sheet.write(4, i, self.getDay(obj.year_id.name, obj.month_id.name, j), title)
+                    sheet.write(4, i, self.getDay(obj.year_id.name, obj.month, j), title)
                     j+=1
-            elif obj.month_id.name in [2,4,6,9,11]:
+            elif obj.month in ['2','4','6','9','11']:
                 for i in range(3,33):
                     sheet.set_column('AH:AH', options={'hidden': True})
                     sheet.write(3, i, j, title)
-                    sheet.write(4, i, self.getDay(obj.year_id.name, obj.month_id.name, j), title)
+                    sheet.write(4, i, self.getDay(obj.year_id.name, obj.month, j), title)
                     j+=1
             else:
                 for i in range(3,34):
                     sheet.write(3, i, j, title)
-                    sheet.write(4, i, self.getDay(obj.year_id.name, obj.month_id.name, j), title)
+                    sheet.write(4, i, self.getDay(obj.year_id.name, obj.month, j), title)
                     j+=1
 
             # Xuất ngày công
@@ -518,8 +512,18 @@ class PartnerXlsx(models.AbstractModel):
                 sheet.write(k, 0, no, content)
                 sheet.write(k, 1, rec.name.name, content)
                 sheet.write(k, 2, rec.position, content)
+                # if rec.one.name == False:
+                #     sheet.write(k, 3, '+', content)
+                #     rec.percentage +=1
+                # else:
                 sheet.write(k, 3, rec.one.name, content)
+
+                # if rec.two.name == False:
+                #     sheet.write(k, 4, "+", content)
+                #     rec.percentage +=1
+                # else:
                 sheet.write(k, 4, rec.two.name, content)
+
                 sheet.write(k, 5, rec.three.name, content)
                 sheet.write(k, 6, rec.four.name, content)
                 sheet.write(k, 7, rec.five.name, content)
@@ -590,7 +594,7 @@ class PartnerXlsx(models.AbstractModel):
             sheet.write(22, 7, "1/2P", content2)
             sheet.write(23, 7, "+", content2)
 
-            sheet.merge_range('Z19:AC19', 'Thái Ngyên, ngày       tháng '+str(obj.month_id.name)+' năm '+str(obj.year_id.name), title2)
+            sheet.merge_range('Z19:AC19', 'Thái Ngyên, ngày       tháng '+str(obj.month)+' năm '+str(obj.year_id.name), title2)
             sheet.merge_range('V20:Z20', 'Người chấm công', title2)
             sheet.merge_range('V21:Z21', '(Ký, họ tên)', content3)
             sheet.merge_range('AC20:AG20', 'Giám đốc', title2)
